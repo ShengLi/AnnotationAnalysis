@@ -25,19 +25,7 @@ mhtGene=function(topTags.object,adjust.method="fdr",alpha=0.05){
   gn.sig=gn[which(topTags(de.com, n=length(topTags.object$genes[[1]]), adjust.method=adjust.method)[[1]]$adj.P.Val < alpha)]
   return(gn.sig)
   }
-# for un paired study from 2 groups
-edgeRfun=function(x,adjust.method="fdr"){
-  group=unlist(strsplit(colnames(x),"\\."))[seq(1,2*ncol(x),2)]
-  d = DGEList(x,group=group, genes=rownames(x))
-  d = calcNormFactors(d)
-  #plotMDS(d,main="MDS Plot for Breast Cancer Cells", labels=colnames(x))
-  d <- estimateCommonDisp(d)
-  print("common dispersion:");print(d$common.dispersion)
-  de.com <- exactTest(d)
-  print("Number of genes pass the multiple hypothesis testing:"); print(mhtGeneNum(de.com,adjust.method))
-  print(topTags(de.com,adjust.method,n=10))
-  return(de.com)
-}
+
 # valcano plot
 volcanoPlot=function(MPA,m.cut=1,p.cut=0.05,p.transform=log10,ylab="-log 10 Adjust P Value", main=NULL){
   M=MPA[,1]; p=MPA[,2]; A=MPA[,3]
@@ -71,14 +59,17 @@ log2FC = log2(rpm[,-1]/rpm[,1])
 
 # rpkm
 # 1. get annotation for exon
-hg18ref=loadFeatures("~/work/project/RRBS/preliminary/GSE27003_RAW/refhg18.sqlite")
-exonRanges <- exonsBy(hg18ref, "tx", use.name=TRUE)
+#hg18ref=loadFeatures("~/work/project/RRBS/preliminary/GSE27003_RAW/refhg18.sqlite")
+#exonRanges <- exonsBy(hg18ref, "tx", use.name=TRUE)
+load("/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/hg18ref.Rdata")
+exonRanges = hg18ref.exon
 numBases <- sum(width(exonRanges))
 names(numBases) <- names(exonRanges)
 geneLengthsInKB <- numBases/1000
 
 # get genename gene id table
-hg18reftable = normalRead("~/work/project/RRBS/preliminary/GSE27003_RAW/refseq_hg18_113011.txt", header=FALSE)
+#hg18reftable = normalRead("~/work/project/RRBS/preliminary/GSE27003_RAW/refseq_hg18_113011.txt", header=FALSE)
+hg18reftable = normalRead('/scratchLocal01/shl2018/eRRBS/bcdata/GSE/refseq_hg18_113011.txt', header=FALSE)
 namesToId = hg18reftable[,1]
 names(namesToId) = str_c(hg18reftable[,3], substring(hg18reftable[,2], 4), sep=".")
 idToNames = str_c(hg18reftable[,3], substring(hg18reftable[,2], 4), sep=".")
@@ -88,7 +79,7 @@ width = aggregate(numBases, by=list(geneName = idToNames[names(numBases)]), max)
 width2 = width[,2]
 names(width2) = width[,1]
 width3=width2[rownames(rna)]
-# filter out rna that don't have a matched gene id 
+# filter out rna that donot have a matched gene id 
 counts = rna[which(!is.na(width3)),]
 millionsMapped <- colSums(rna)/1e+06
 rpm <- rna/millionsMapped
@@ -100,7 +91,7 @@ cond_minus=6:8
 medianNormal=function(count){
   # Compute the geometric mean of the gene counts (rows in lncap_counts) across all samples in the experiment as a pseudo-reference sample.
   geoMeans=as.matrix(exp(apply(log(count),1,mean)))
-  # Each library size parameter is computed as the median of the ratio of the sample's counts to those of the pseudo-reference sample.
+  # Each library size parameter is computed as the median of the ratio of the sample counts to those of the pseudo-reference sample.
   ratios = rna/geoMeans
   sizeFactors = apply(as.matrix(ratios),2,median)
   # The counts can be transformed to a common scale using size factor adjustment.
@@ -136,11 +127,22 @@ topStdRna=topStd(rna[,-1],500)
 #cluster(rna[,-1], k=2)
 
 # edgeR
-de.com=edgeRfun(rna[,-1])
+
+x = rna[,-1]
+adjust.method="fdr"
+d = DGEList(x,group=group, genes=rownames(x))
+d = calcNormFactors(d)
+#plotMDS(d,main="MDS Plot for Breast Cancer Cells", labels=colnames(x))
+d <- estimateCommonDisp(d)
+print("common dispersion:");print(d$common.dispersion)
+de.com <- exactTest(d)
+print("Number of genes pass the multiple hypothesis testing:"); print(mhtGeneNum(de.com,adjust.method))
+print(topTags(de.com,adjust.method,n=10))
+
 cpm.d=cpm(d,TRUE)
 cpm.sig=cpm.d[mhtGene(de.com,"fdr"),]
 
-# filter out rna that don't have a matched gene id 
+# filter out rna that do not have a matched gene id 
 width3=width2[rownames(cpm.sig)]
 
 cpm.sig.match = cpm.sig[which(!is.na(width3)),]
