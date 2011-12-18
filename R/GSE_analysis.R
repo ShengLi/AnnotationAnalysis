@@ -39,6 +39,8 @@ volcanoPlot=function(MPA,m.cut=1,p.cut=0.05,p.transform=log10,ylab="-log 10 Adju
   legend("topleft",c("Up-regulated genes", "Down-regulated genes"), col=c("red","green"), pch=16)
 }
 
+getRefseqID=function(x, pattern="_chr", part=1){x.split=unlist(strsplit(x,split=pattern)); id=x.split[seq(part,length(x.split),2)]; return(id)}
+
 # cell lines
 cell.lines=unique(matrix(unlist(str_split(dir(),"_")), ncol=4, byrow=TRUE)[,2])
 ERminus=c("BT20", "MDAMB468", "MDAMB231")
@@ -64,7 +66,8 @@ log2FC = log2(rpm[,-1]/rpm[,1])
 load("/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/hg18ref.Rdata")
 exonRanges = hg18ref.exon
 numBases <- sum(width(exonRanges))
-names(numBases) <- names(exonRanges)
+#names(numBases) <- names(exonRanges)
+names(numBases) <- getRefseqID(names(exonRanges))
 geneLengthsInKB <- numBases/1000
 
 # get genename gene id table
@@ -148,6 +151,8 @@ width3=width2[rownames(cpm.sig)]
 cpm.sig.match = cpm.sig[which(!is.na(width3)),]
 geneLengthsInKB <- width3[which(!is.na(width3))]/1000
 rpkm <- cpm.sig.match/geneLengthsInKB
+
+# load('/scratchLocal01/shl2018/eRRBS/bcdata/GSE/DEGrpkm.Rdata')
 
 # get rpkm for meth feature matrix
 gene.names = unlist(normalRead(x="meth.CE.symble.txt",header=FALSE))

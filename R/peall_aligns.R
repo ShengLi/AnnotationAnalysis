@@ -38,3 +38,8 @@ bamFiles = str_c(bamDir,'s_',1:8,'_hg18.bam')
 
 
 allCounts = lapply(bamFiles, bamToCount)
+
+seBamFiles = dir('/scratchLocal01/shl2018/all/sortedbam',
+full.names=TRUE, pattern='bam')[seq(1,24,2)]
+
+seAllCounts = lapply(seBamFiles, bamToCount)

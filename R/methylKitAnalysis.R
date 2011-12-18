@@ -36,7 +36,7 @@ getRatioByRegion=function(meth.regions, id){
   return(ratio)
 }
 
-# given meth.resions and id return methylation per sample, include a talbe of every regions' methylation
+# given meth.resions and id return methylation per sample, include a talbe of every regions methylation
 getRatioBySample=function(meth.regions.list, id){
   # meth.regions.list=list(exon=meth.exon, intron=meth.intron, promoter=meth.promoter, cpg=meth.cpg, shore=meth.shore)
   # id = CEmeti1
@@ -193,6 +193,6 @@ save(myobj, file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/myCpG.Rdata")
 save(meth.exon,meth.intron,meth.promoter,meth.cpg,meth.shore,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/meth.Rdata")
 save(myDiff.exon,myDiff.intron,myDiff.promoter,myDiff.cpg,myDiff.shore,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/myDiff.Rdata")
 save(myDiff25p.exon,myDiff25p.intron,myDiff25p.promoter,myDiff25p.cpg,myDiff25p.shore,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/myDiff25p.Rdata")
-save(hg18ref.exon,hg18ref.intron,hg18ref.promoter,hg18ref.cpg,hg18ref.shore, file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/hg18ref.Rdata")
+save(hg18ref.exon,hg18ref.intron,hg18ref.promoter,hg18ref.cpg,hg18ref.shore,g.cpg,hg18ref.TSS,txPos, file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/hg18ref.Rdata")
 save(cpg.dist,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/cpgDist.Rdata")
 # cpg.dist from cpgTSSDistTable
