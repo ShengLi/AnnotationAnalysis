@@ -213,6 +213,16 @@ selectFeature=function(featureM, status, maxit=5000){
   return(selected_features)
 }
 
+selectFeature=function(featureM, status, family="binomial",maxit=5000){
+  cv.fit <- cv.glmnet(featureM, status, family = family, maxit = maxit, grouped=FALSE)
+  fit <- glmnet(featureM, status, family = family, maxit = maxit)
+  Coefficients <- coef(fit, s = cv.fit$lambda.min)
+  Active.Index <- which(Coefficients != 0)
+  Active.Coefficients <- Coefficients[Active.Index]
+  selected_features=colnames(featureM)[Active.Index]
+  return(selected_features)
+}
+
 glm.bootstrap=function(x){selectFeature(featureM[resamples.all[x,],], status[resamples.all[x,]])}
 resamples <- function(data, size, times=20, replace=FALSE){tmp=lapply(1:times, function(i)sample(data, replace = replace,size=size)); return(matrix(unlist(tmp), ncol=size, byrow=TRUE))}
 re.plus=resamples(1:4,3,times=100)
