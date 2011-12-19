@@ -32,11 +32,11 @@ getRatioByRegion=function(meth.regions, id){
   midx=which(meth.regions$id %in% id)
   ratio=meth.regions[midx,meth.regions@numCs.index]/meth.regions[midx,meth.regions@coverage.index]
   colnames(ratio)=meth.regions@sample.ids
-  rownames(ratio)=id
+  rownames(ratio)=meth.regions$id[midx]
   return(ratio)
 }
 
-# given meth.resions and id return methylation per sample, include a talbe of every regions' methylation
+# given meth.resions and id return methylation per sample, include a talbe of every regions methylation
 getRatioBySample=function(meth.regions.list, id){
   # meth.regions.list=list(exon=meth.exon, intron=meth.intron, promoter=meth.promoter, cpg=meth.cpg, shore=meth.shore)
   # id = CEmeti1
@@ -124,6 +124,12 @@ hg18ref.shore=filterID(hg18ref.shore)
 myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(1,1,1,1,0,0,0))
 #myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(0,0,0,0,1,1,1,1))
 # conver the CpG di into gene based methylation
+myobj.exon=regionCounts(myobj,hg18ref.exon)
+myobj.intron=regionCounts(myobj,hg18ref.intron)
+myobj.promoter=regionCounts(myobj,hg18ref.prmoter)
+myobj.cpg=regionCounts(myobj,hg18ref.cpg)
+myobj.shore=regionCounts(myobj,hg18ref.shore)
+
 meth.exon=methRegion(myobj,hg18ref.exon)
 meth.intron=methRegion(myobj,hg18ref.intron)
 meth.promoter=methRegion(myobj,hg18ref.promoter)
@@ -193,6 +199,6 @@ save(myobj, file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/myCpG.Rdata")
 save(meth.exon,meth.intron,meth.promoter,meth.cpg,meth.shore,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/meth.Rdata")
 save(myDiff.exon,myDiff.intron,myDiff.promoter,myDiff.cpg,myDiff.shore,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/myDiff.Rdata")
 save(myDiff25p.exon,myDiff25p.intron,myDiff25p.promoter,myDiff25p.cpg,myDiff25p.shore,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/myDiff25p.Rdata")
-save(hg18ref.exon,hg18ref.intron,hg18ref.promoter,hg18ref.cpg,hg18ref.shore, file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/hg18ref.Rdata")
+save(hg18ref.exon,hg18ref.intron,hg18ref.promoter,hg18ref.cpg,hg18ref.shore,g.cpg,hg18ref.TSS,txPos, file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/hg18ref.Rdata")
 save(cpg.dist,file="/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/cpgDist.Rdata")
 # cpg.dist from cpgTSSDistTable

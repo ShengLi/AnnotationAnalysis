@@ -55,6 +55,12 @@ hg18ref.TSS=GRanges(seqnames=txChr,
           	strand=txStrand,
 			name = txUniId)
 genome(hg18ref.TSS)=genome(hg18ref)[names(seqlengths(hg18ref.TSS))]
+
+# 3'UTR by tx-GRL
+hg18ref.cds = cdsBy(hg18ref, "tx",use.names=TRUE); names(hg18ref.cds) = exonsByUniId
+hg18ref.3utr = threeUTRsByTranscript(hg18ref, use.name=TRUE); names(hg18ref.3utr) = exonsByUniId; genome(hg18ref.3utr) = genome(hg18ref)
+hg18ref.5utr = fiveUTRsByTranscript
+
 # promoter by tx-GR
 promFlank=1000
 hg18ref.promoter=GRanges(seqnames=txChr,
