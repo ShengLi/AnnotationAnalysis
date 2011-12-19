@@ -32,7 +32,7 @@ getRatioByRegion=function(meth.regions, id){
   midx=which(meth.regions$id %in% id)
   ratio=meth.regions[midx,meth.regions@numCs.index]/meth.regions[midx,meth.regions@coverage.index]
   colnames(ratio)=meth.regions@sample.ids
-  rownames(ratio)=id
+  rownames(ratio)=meth.regions$id[midx]
   return(ratio)
 }
 
@@ -124,6 +124,12 @@ hg18ref.shore=filterID(hg18ref.shore)
 myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(1,1,1,1,0,0,0))
 #myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(0,0,0,0,1,1,1,1))
 # conver the CpG di into gene based methylation
+myobj.exon=regionCounts(myobj,hg18ref.exon)
+myobj.intron=regionCounts(myobj,hg18ref.intron)
+myobj.promoter=regionCounts(myobj,hg18ref.prmoter)
+myobj.cpg=regionCounts(myobj,hg18ref.cpg)
+myobj.shore=regionCounts(myobj,hg18ref.shore)
+
 meth.exon=methRegion(myobj,hg18ref.exon)
 meth.intron=methRegion(myobj,hg18ref.intron)
 meth.promoter=methRegion(myobj,hg18ref.promoter)
