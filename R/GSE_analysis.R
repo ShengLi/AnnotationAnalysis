@@ -153,7 +153,9 @@ geneLengthsInKB <- width3[which(!is.na(width3))]/1000
 rpkm <- cpm.sig.match/geneLengthsInKB
 
 # load('/scratchLocal01/shl2018/eRRBS/bcdata/GSE/DEGrpkm.Rdata')
-
+names(rpkm)=sapply(strsplit(colnames(rpkm),'\\.'),'[[',2)
+y1=rpkm[CEmeti1,]
+y2=rpkm[CEmeti2,]
 # get rpkm for meth feature matrix
 gene.names = unlist(normalRead(x="meth.CE.symble.txt",header=FALSE))
 rpkmForMeth=rpkm[gene.names,]
@@ -224,10 +226,11 @@ selectFeature=function(featureM, status, family="binomial",maxit=5000){
   cv.fit <- cv.glmnet(featureM, status, family = family, maxit = maxit, grouped=FALSE)
   fit <- glmnet(featureM, status, family = family, maxit = maxit)
   Coefficients <- coef(fit, s = cv.fit$lambda.min)
-  Active.Index <- which(Coefficients != 0)
-  Active.Coefficients <- Coefficients[Active.Index]
-  selected_features=colnames(featureM)[Active.Index]
-  return(selected_features)
+  #Active.Index <- which(Coefficients != 0)
+  #Active.Coefficients <- Coefficients[Active.Index]
+  #selected_features=colnames(featureM)[Active.Index]
+  names(Coefficients)=colnames(featureM)
+  return(as.matrix(Coefficients))
 }
 
 glm.bootstrap=function(x){selectFeature(featureM[resamples.all[x,],], status[resamples.all[x,]])}

@@ -268,25 +268,27 @@ txChr=as.character(seqnames(tx.db))
 txName = elementMetadata(tx.db)[,"tx_name"]
 
 # prmoter
-promFlank=1000
-promoter.db=GRanges(seqnames=txChr,
-                    ranges=IRanges(start=txTSS-promFlank, end=txTSS+promFlank),
-                    strand=txStrand,
-                    name = txName)
+extendTss=function(txdb, upFlank, dnFlank){
+  txStart=start(tx.db)
+  txEnd =end(tx.db)
+  txStrand=as.character(strand(tx.db))
+  txChr=as.character(seqnames(tx.db))
+  txName = elementMetadata(tx.db)[,"tx_name"]
+  txTSS = txStart
+  txTSS[txStrand=="-"] = txEnd[txStrand=="-"]
+  
+  extended=GRanges(seqnames=txChr,
+                   ranges=IRanges(start=txTSS-upFlank, end=txTSS+dnFlank),
+                   strand=txStrand,
+                   name = txName)
+  extended  
+}
 
+tssPM1kb.db=extendTss(txdb,1000,1000)
+tssM2kb.db=extendTss(txdb,2000,0)
+tssM3kb.db=extendTss(txdb,3000,0)
 # tss
-txStart=start(tx.db)
-txEnd =end(tx.db)
-txStrand=as.character(strand(tx.db))
-txChr=as.character(seqnames(tx.db))
-txName = elementMetadata(tx.db)[,"tx_name"]
-txTSS = txStart
-txTSS[txStrand=="-"] = txEnd[txStrand=="-"]
-
-tss.db=GRanges(seqnames=txChr,
-            ranges=IRanges(start=txTSS, end=txTSS),
-            strand=txStrand,
-  		      name = txName)
+tss.db=extendTss(txdb,0,0)
 
 # cpgi by tx-GR
 # need to consider strandness?
@@ -314,10 +316,70 @@ cpgi.db = GRanges(seqnames=cpgTSSDistTable$seqnames.y,
 
 shores=c( flank(cpgi.db,1000),flank(cpgi.db,1000,FALSE) )
 shore.db = split(shores, rep(1:length(cpgi.db),2))
+names(shore.db)=as.character(values(cpgi.db)[,1])
+
 
 hg18ref=list(exon=exon.db, intron=intron.db,
-             tss=tss.db, cpgi=cpgi.db, shore=shore.db, 
+             tssPM1kb=tssPM1kb.db, tssM2kb=tssM2kb.db, tssM3kb=tssM3kb.db,
+             cpgi=cpgi.db, shore=shore.db, 
              cds=cds.db,threeutr=threeutr.db, fiveutr=fiveutr.db,
              firstin=firstin.db, lastin=lastin.db,
              firstex=firstex.db, lastex=lastex.db)
 save(hg18ref,file="~/annotation/hg18/refseq/hg18regions.Rdata")
+
+
+# get the gene and symbol
+exon.width=width(hg18ref$exon)
+tx.width=unlist(lapply(1:length(exon.width), function(i){sum(exon.width[[i]])}))
+tx.name=names(hg18ref$exon)
+names(tx.width)=tx.name
+names(txChr)=elementMetadata(tx.db)[,'tx_name']
+tx.chr=txChr[tx.name]
+dupname=str_c('NM_',sapply(strsplit(tx.name,'_'),'[[',2))
+names(dupname)=tx.name
+
+# from refseqid to symbol
+library(sequencingUtils)
+library(utilities)
+include.eg.db('hg18')
+symbols=refseq.to.symbol(dupname)
+
+# sybmol + chr + width
+CEsymbols=str_c(symbols,sapply(strsplit(tx.chr,'chr'),'[[',2),sep='.')
+names(CEsymbols)=tx.name
+CEsymbolswidth=str_c(CEsymbols,tx.width,sep="_")
+names(CEsymbolswidth)=tx.name
+# get the symbol+chr with the max width
+max.width=aggregate(tx.width, by=list(CEsymbols), max)
+symbols.max.width=str_c(max.width[,1], unlist(max.width[,2] ), sep="_")
+matched.tx.name=tx.name[which(CEsymbolswidth %in% symbols.max.width)]
+matched.CEsymbols=CEsymbols[which(CEsymbolswidth %in% symbols.max.width)]
+names(matched.CEsymbols)=tx.name[which(CEsymbolswidth %in% symbols.max.width)]
+
+# get matched meid and exprid
+CEmeti1=matched.CEsymbols[which(matched.CEsymbols %in% CE1.symbol)]
+# remove duplicates
+CEmeti1=CEmeti1[-which(CEmeti1%in%CEmeti1[which(duplicated(CEmeti1))])]
+
+CEmeti2=matched.CEsymbols[which(matched.CEsymbols %in% CE2.symbol)]
+# remove duplicates
+CEmeti2=CEmeti2[-which(CEmeti2%in%CEmeti2[which(duplicated(CEmeti2))])]
+
+load('/scratchLocal01/shl2018/eRRBS/bcdata/GSE/DEGrpkm.Rdata')
+colnames(rpkm)=sapply(strsplit(colnames(rpkm),'\\.'),'[[',2)
+
+CEmeti1=CEmeti1[which(CEmeti1%in%rownames(rpkm) & names(CEmeti1 )%in%rownames(reMethRatioMap[[1]]))]
+CEmeti2=CEmeti2[which(CEmeti2%in%rownames(rpkm) & names(CEmeti2)%in%rownames(reMethRatioMap[[2]]))]
+
+# get rpkm
+y1=rpkm[CEmeti1,]
+y2=rpkm[CEmeti2,]
+
+# get feature matrix
+X1=foreach(i=1:length(reMethRatioMap)) %do% reMethRatioMap[[i]][names(CEmeti1),]
+X2=foreach(i=1:length(reMethRatioMap)) %do% reMethRatioMap[[i]][names(CEmeti2),]
+
+X1=foreach(i=1:length(regionsMethRatio)) %do% regionsMethRatio[[i]][names(CEmeti1),]
+X2=foreach(i=1:length(regionsMethRatio)) %do% regionsMethRatio[[i]][names(CEmeti2),]
+
+save(X1,X2,y1,y2, file='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/glmnetXy.Rdata')

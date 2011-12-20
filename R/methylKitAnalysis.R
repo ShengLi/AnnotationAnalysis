@@ -95,9 +95,43 @@ sumMyDiff=function(refseq.id,myDiff.list, region.names, byRefseqId=TRUE){
   }
   return(myDiffSum)
 }
+
+# given regional myobj, return the methylation ratio and match with meid 
+regionRatio=function(myobj.region, meid){
+  x=myobj.region; y=x$numCs/x$coverage; names(y)=x$id; 
+  meth=y[meid]; meth[which(is.na(meth))]=0; return(meth)
+}
+
+matchMethRatio=function(txdblist,myobj.sub){
+  require(doMC)
+  registerDoMC(cores=8)
+
+  t=length(txdblist)
+  myobj.txdb=foreach(i = 1:t) %dopar% regionCounts(myobj.sub, txdblist[[i]])
+  meid=unique(as.character(unlist(foreach(i=1:t) %dopar% myobj.txdb[[i]]$id)))
+  meth=foreach(i=1:t) %dopar% regionRatio(myobj.txdb[[i]], meid)
+  meth.m=matrix(unlist(meth), ncol=length(meth),byrow=FALSE)
+  colnames(meth.m)=names(txdblist)
+  rownames(meth.m)=meid
+  return(meth.m)
+}
+
+# given a matrix return a binomial feature matrix
+polyMap=function(x,k=2){
+  require(doMC)
+  cbn=combn(1:ncol(x),k)
+  numcb=ncol(cbn)
+  bn=foreach(i=1:numcb) %do% (x[,cbn[1,i]] * x[,cbn[2,i]])
+  bn.m=matrix(unlist(bn),ncol=numcb,byrow=FALSE)
+  cn=unlist(foreach(i=1:numcb) %do% {cn=colnames(x)[cbn[1:2,i]]; paste(cn[1],cn[2],sep="*")})
+  colnames(bn.m)=cn
+  rownames(bn.m)=rownames(x)
+  bn.m
+}
 #
 # end of function
 #
+load("~/annotation/hg18/refseq/hg18regions.Rdata")
 # cell line my_CpG file arrangement.
 ERplus=c("MCF7","T47D","BT474","ZR751")
 ERminus=c("BT20", "MDAMB468", "MDAMB231")
@@ -112,27 +146,29 @@ samples = c(ERplus,ERminus)
 #samples = c(nonmeta,meta)
 sample.id=vectorToList(samples)
 
-
-# filtered out non-protein-coding refseqid the hg18ref GRanges or GRangesList 
-hg18ref.exon=filterID(hg18ref.exon)
-hg18ref.intron=filterID(hg18ref.intron)
-hg18ref.promoter=filterID(hg18ref.promoter, is.grl=FALSE)
-hg18ref.cpg=filterID(hg18ref.cpg)
-hg18ref.shore=filterID(hg18ref.shore)
-
 # read meth myCpG file
 myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(1,1,1,1,0,0,0))
-#myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(0,0,0,0,1,1,1,1))
+regionsMethRatio=foreach(i=1:length(myobj)) %do% matchMethRatio(hg18ref,myobj[[i]])
+save(regionsMethRatio, file='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/regionsMethRatio.Rdata')
+save(myobj, file='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/ERmyobj.Rdata')
+reMethRatioMap=foreach(i=1:length(regionsMethRatio))%do% cbind(regionsMethRatio[[i]], polyMap(regionsMethRatio[[i]]))
+# metastatic part:
+nonmeta=c("MCF7","T47D","BT474","ZR751")
+meta=c("MDAMB361", "MDAMB468", "MDAMB231","HS578T")
+path='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/'
+pattern='_myCpG.txt'
+files = str_c(path,c(nonmeta,meta),pattern)
+file.list=vectorToList(files)
+samples = c(nonmeta,meta)
+sample.id=vectorToList(samples)
+
+meta.myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(0,0,0,0,1,1,1,1))
+save(meta.myobj, file='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/metamyobj.Rdata')
+
+
+
+#
 # conver the CpG di into gene based methylation
-myobj.exon=regionCounts(myobj,hg18ref$exon)
-myobj.intron=regionCounts(myobj,hg18ref$intron)
-myobj.promoter=regionCounts(myobj,hg18ref$prmoter)
-myobj.cpg=regionCounts(myobj,hg18ref$cpgi)
-myobj.shore=regionCounts(myobj,hg18ref$shore)
-myobj.cds=regionCounts(myobj,hg18ref$cds)
-myobj.threeutr=regionCounts(myobj,hg18ref$threeutr)
-myobj.fiveutr=regionCounts(myobj,hg18ref$fiveutr)
-myobj.=regionCounts(myobj,hg18ref$)
 
 meth.exon=methRegion(myobj,hg18ref.exon)
 meth.intron=methRegion(myobj,hg18ref.intron)
@@ -155,6 +191,7 @@ myDiffSum=sumMyDiff(refseq.id,
 # preparing for matrix
 #refseq_id=getRefseqID(names(ref18.exon))
 library(sequencingUtils)
+library(utilities)
 include.eg.db('hg18')
 refseq_symbols=refseq.to.symbol(txNameNM)
 refseq_chrs=getRefseqID(txChrNM,pattern="chr",2)
