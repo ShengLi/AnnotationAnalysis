@@ -383,3 +383,27 @@ X1=foreach(i=1:length(regionsMethRatio)) %do% regionsMethRatio[[i]][names(CEmeti
 X2=foreach(i=1:length(regionsMethRatio)) %do% regionsMethRatio[[i]][names(CEmeti2),]
 
 save(X1,X2,y1,y2, file='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/glmnetXy.Rdata')
+
+coefMatrix=function(X,y, cnames){
+  results=c()
+  for(i in 1:7) {
+    results=cbind(results, selectFeature(X[[i]], y[,i],'gaussian',20000)); 
+  }
+  colnames(results)=cnames
+  results
+}
+
+coefPlot=function(coef.matrix){
+  a <- coef.matrix
+  #rowv <- as.dendrogram(hclust(as.dist(1-cor(t(a)))))
+  colv <- as.dendrogram(hclust(as.dist(1-cor(a))))
+  heatmap.2(a, scale="row", Colv=colv)
+}
+
+coef1=coefMatrix(X1,y 1,1:7)
+coefPlot(coef1[-1,])
+coef2=coefMatrix(X2,y2,1:7)
+heatmap(results[-1,])
+
+# predict
+i=1;X=X1[[i]];y=y1[,i];cv.fit = cv.glmnet(X,y,family='gaussian',maxit=20000, grouped=FALSE);ypre=predict(cv.fit,X); cor(t(y),t(ypre))

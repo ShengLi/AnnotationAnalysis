@@ -164,9 +164,29 @@ sample.id=vectorToList(samples)
 
 meta.myobj=read(file.list,sample.id=sample.id, assembly='hg18',treatment=c(0,0,0,0,1,1,1,1))
 save(meta.myobj, file='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/metamyobj.Rdata')
+meta.meth=unite(meta.myobj)
+sort.meth=meta.meth[with(meta.meth, order(chr, start)), ]
+distByChr=foreach(chr=unique(meta.meth$chr)) %do% {pos=c(0,sort.meth$start[which(sort.meth$chr==chr)]);d=diff(pos);return(d)}
+names(distByChr)=unique(meta.meth$chr)
+getIslandId=function(x,k){islandid=c(1);i=1;for(d in x[-1]){if(d>k)i=i+1;islandid=c(islandid,i)}; islandid}
+k=32; islandByChr=foreach(chr=unique(meta.meth$chr)) %do% getIslandId(distByChr[[chr]],k)
 
+registerDoMC(cores=8)
+k=32;
+distByChr=foreach(chr=unique(meta.meth$chr)) %dopar% {
+  pos=sort.meth$start[which(sort.meth$chr==chr)];
+  d=diff(c(0,pos))
+  islandid=getIslandId(d,k)
+  islandpos=aggregate(pos,by=list(island_id=islandid),
+                      function(x){return(c(min(x),max(x)))})
+  colnames(islandpos)=c('id','pos') 
+  return(islandpos)
+  }
+  
+eisland=c(); for(chr in 1:length(distByChr)) eisland=rbind(eisland, cbind2(unique(meta.meth$chr)[chr], distByChr[[chr]])) 
+eislandbed=eisland[,c(1,3,2)]
 
-
+write.table(eislandbed,file='/scratchLocal01/shl2018/eRRBS/bcdata/myCpG/empiricalisland.bed',quote=FALSE,sep='\t',row.names=FALSE,col.names=FALSE)
 #
 # conver the CpG di into gene based methylation
 
