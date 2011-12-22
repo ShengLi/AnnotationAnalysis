@@ -16,7 +16,7 @@ cutoff=median(timeToR)
 slow.idx=which(timeToR>cutoff)
 fast.idx=which(timeToR<cutoff)
 
-status=rep(1,10); status[fast.idx]=-1
+status=rep(1,10); status[slow.idx]=0 
 
 ### x feature matrix
 ## cli feature matrix part
@@ -40,6 +40,9 @@ diff.gene_id=foreach(i=1:l)%do% diff.files[[i]]$gene_id[which(diff.files[[i]]$si
 gene.diff=foreach(i=1:l)%do% {x=diff.files[[i]];ok.idx=which(x$status=="OK"); y=(x$value_2-x$value_1)[ok.idx];names(y)=x$gene[ok.idx];return(y)}
 common.gene=names(which(table(names(unlist(gene.diff)))==10))
 diff.m=c();for(i in 1:l) diff.m=cbind(diff.m, gene.diff[[i]][common.gene])
+# apply normal distribution test to see how 
+diff.m=diff.m[,-3]
+y=apply(diff.m,1,function(x){shapiro.test(x)$p.value})
 norm.diff=diff.m[which(y>=0.05),]
 sd.diff=apply(norm.diff,1, sd)
 se.diff=sd.diff/sqrt(l)
@@ -50,6 +53,43 @@ t=(mean.diff-D)/se.diff
 p.value=2*pt(-abs(t),df=l-1)
 # end cuffdiff
 
-# cufflinks output
+## apply wilcox.test to get the paired study
+# get the D matrix and R matrix
+gene.D=c(); gene.R=c();
+for(i in 1:l){
+  x=diff.files[[i]];
+  common.idx=which(x$gene%in%common.gene); 
+  D=x$value_1[common.idx];
+  names(D)=x$gene[common.idx];
+  R=x$value_2[common.idx]
+  names(R)=x$gene[common.idx];
+  gene.D=cbind(gene.D,D);
+  gene.R=cbind(gene.R,R);
+  }
+colnames(gene.D)=paste("D",1:l,sep="_")
+colnames(gene.R)=paste("R",1:l,sep="_")
 
+# because in D_3, the rpkm is all zero,so skip this first
+gene.D=gene.D[,-3]
+gene.R=gene.R[,-3]
+y=apply(cbind(gene.D,gene.R),1,function(x){shapiro.test(x)$p.value})
+# for normal run t.test
+nidx=which(y>=0.05)
+uidx=which(y<0.05)
+p.t=sapply(1:length(nidx), function(i){t.test(gene.D[nidx,][i,],gene.R[nidx,][i,],paired=TRUE)}); padj.t=p.adjust(p.t[3,],'fdr')
+p.w=sapply(1:length(uidx), function(i){wilcox.test(gene.D[uidx,][i,],gene.R[uidx,][i,],paired=TRUE)}); padj.w=p.adjust(p.w[3,],'fdr')
+# wilcox for all data
+p.wil=sapply(1:nrow(gene.D), function(i){wilcox.test(gene.D[i,],gene.R[i,],paired=TRUE)}); padj=p.adjust(p.wil[3,],'fdr') 
+# cufflinks output
+wil.idx=which(p.wil[3,]<0.05)
+expr.logRatio=t(log((gene.R[wil.idx,]+1)/(gene.D[wil.idx,]+1)))
+x.expr=expr.logRatio
 # end cufflinks output
+
+## feature matrix
+X = cbind(x.c[-3,],x.expr)
+y = status[-3]
+
+## glmnet 
+coef=selectFeature(X, y,'binomial',20000)     
+
