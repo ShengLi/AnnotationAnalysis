@@ -391,7 +391,18 @@ coefMatrix=function(X,y, cnames){
   }
   colnames(results)=cnames
   results
+  #[which(rowSums(results)!=0),]
 }
+
+rcoefMatrix=function(X,y, cnames){
+  results=c()
+  for(i in 1:7) {
+    results=cbind(results, selectFeature(X[[i]], sample(y[,i]),'gaussian',20000)); 
+  }
+  colnames(results)=cnames
+  results
+}
+
 
 coefPlot=function(coef.matrix){
   a <- coef.matrix
@@ -400,10 +411,29 @@ coefPlot=function(coef.matrix){
   heatmap.2(a, scale="row", Colv=colv)
 }
 
-coef1=coefMatrix(X1,y 1,1:7)
-coefPlot(coef1[-1,])
-coef2=coefMatrix(X2,y2,1:7)
-heatmap(results[-1,])
+heatmap.wrapper=function(x, rm.zero=TRUE,cexRow=1.2, cexCol=1.5, margins=c(6,6)){
+  if(rm.zero) x=x[which(rowSums(x)!=0),]
+  heatmap.2(x, col=topo.colors(75), scale="row", ColSideColors=patientcolors,margins=margins,
+          key=FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=cexRow,cexCol=cexCol, dendrogram="col")
+}
+colNames=c('plus1', 'plus2', 'plus3', 'plus4', 'minus1', 'minus2', 'minus3')
+coef1=coefMatrix(X1,y1,colNames);heatmap.wrapper(coef1[-1,], TRUE)
+coef2=coefMatrix(X2,y2,colNames);heatmap.wrapper(coef2[-1,], TRUE)
 
+rcoef1=rcoefMatrix(X1,y1,colNames); heatmap.wrapper(rcoef1[-1,], TRUE)
+rcoef2=rcoefMatrix(X2,y2,colNames); heatmap.wrapper(rcoef2[-1,], TRUE)
+
+patientcolors=rep(c("#E890E5","#05F0FC"),c(4,3))
+
+cexRow=1.2; cexCol=1.5; margins=c(6,6)
+heatmap.2(coef1[-1,], col=topo.colors(75), scale="row", ColSideColors=patientcolors,margins=margins,
+          key=FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=cexRow,cexCol=cexCol, dendrogram="col")
+heatmap.2(coef2[c(-1,-5),], col=topo.colors(75), scale="row", ColSideColors=patientcolors,
+          key=TRUE, symkey=FALSE, density.info="none", trace="none", cexRow=cexRow,cexCol=cexRow, dendrogram="col")
+
+heatmap.2(rcoef1[-1,], col=topo.colors(75), scale="row", ColSideColors=patientcolors,
+          key=TRUE, symkey=FALSE, density.info="none", trace="none", cexRow=cexRow,cexCol=cexRow, dendrogram="col")
+heatmap.2(rcoef2[-1,], col=topo.colors(75), scale="row", ColSideColors=patientcolors,
+          key=TRUE, symkey=FALSE, density.info="none", trace="none", cexRow=cexRow,cexCol=cexRow, dendrogram="col")
 # predict
 i=1;X=X1[[i]];y=y1[,i];cv.fit = cv.glmnet(X,y,family='gaussian',maxit=20000, grouped=FALSE);ypre=predict(cv.fit,X); cor(t(y),t(ypre))
