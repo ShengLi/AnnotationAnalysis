@@ -83,13 +83,28 @@ p.wil=sapply(1:nrow(gene.D), function(i){wilcox.test(gene.D[i,],gene.R[i,],paire
 # cufflinks output
 wil.idx=which(p.wil[3,]<0.05)
 expr.logRatio=t(log((gene.R[wil.idx,]+1)/(gene.D[wil.idx,]+1)))
+expr.diff=t(gene.R[wil.idx,]-gene.D[wil.idx,])
+
 x.expr=expr.logRatio
 # end cufflinks output
 
 ## feature matrix
-X = cbind(x.c[-3,],x.expr)
-y = status[-3]
+#X=t(gene.R-gene.D)
+X = cbind(x.c[-3,],expr.logRatio)
+#y = status[-3]
+y=timeToR[-3]
 
-## glmnet 
-coef=selectFeature(X, y,'binomial',20000)     
+reg.fit=function(X,y,family='binomial',alpha=0.5,nfolds=3,pmax=10){
+  e.cv  <- cv.glmnet( X, y, nfolds=nfolds)
+  e.l   <- e.cv$lambda.min
+  e.fits <- glmnet( X, y, family=family, alpha=alpha, nlambda=100,pmax=pmax)
+  Coefficients <- coef(e.fits, s = e.l)
+  Active.Index <- which(Coefficients != 0)
+  Active.Coefficients <- Coefficients[Active.Index]
+  names(Active.Coefficients) <- rownames(Coefficients)[Active.Index]
+  cor=cor.test( predict(e.fits, X, type="response", s=e.l), y)$estimate
+  return(list(coef=Active.Coefficients, cor=cor))
+}
+
+ 
 
