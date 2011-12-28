@@ -49,6 +49,8 @@ top2k=topTable(fit2, number=2000)
 sig.gene=top2k$ID[which(top2k$P.Value<0.05)]
 sig.exprs=genes.exprs[sig.gene,]
 x.exprs=t(log((sig.exprs[,42:82]+1)/(sig.exprs[,1:41]+1)))
+
+
 library(annotate)
 biocLite("hgu133plus2cdf")
 biocLite("hgu133plus2.db")
@@ -95,3 +97,15 @@ reg.fit.test=function(X.sf,y.sf,tn=32, family='gaussian',alpha=0.5,nfolds=8,pmax
 }
 
 reg.fit.test(X.sf,y.sf, alpha=0.2,pmax=40,tn=35,nfolds=5)
+
+# bootstrapping
+boot.huber = function(data=data, indices){
+  data = data[indices,]
+  mod = reg.fit.test(data[,-1],data[,1], alpha=0.2,pmax=40,tn=35,nfolds=5)
+  mod$coef
+}
+  
+data=cbind(X.sf, y.sf)
+
+
+
