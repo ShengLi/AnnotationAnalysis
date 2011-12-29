@@ -129,3 +129,25 @@ data=cbind(X.sf, y.sf)
 
 
 >>>>>>> d66c6770a75792117b7cb34771a5b963e08a6353
+
+# one sample subtraction a time and see the changes in cor, test.cor and coef
+
+X.rand=matrix(sample(X.sf), ncol=ncol(X.sf))
+colnames(X.rand)=colnames(X.sf)
+# initialize variable
+cor.m=c();test.cor.m=c();
+real.coef=list();rand.coef=list()
+for (i in 1:41) {
+	real=reg.fit.test(X.sf[-i,],y.sf[-i], alpha=0.2,pmax=40,tn=35,nfolds=5)
+	rand=reg.fit.test(X.rand[-i,],y.sf[-i], alpha=0.2,pmax=40,tn=35,nfolds=5)
+	cor.m=rbind(cor.m,c(real$cor,rand$cor))
+	test.cor.m=rbind(test.cor.m,c(real$test.cor,rand$test.cor))
+	real.coef[[i]]=real$coef
+	rand.coef[[i]]=rand$coef
+}
+
+cl=unlist(real.coef)
+agg.med=aggregate(cl,by=list(names(cl)),median)
+coef.showup=table(names(cl))[agg.med[,1]]/41
+coef.m=cbind(agg.med[,2], coef.showup)
+sort.coef=coef.m[with(coef.m,order(coef.showup)),]
