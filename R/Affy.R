@@ -95,3 +95,21 @@ reg.fit.test=function(X.sf,y.sf,tn=32, family='gaussian',alpha=0.5,nfolds=8,pmax
 }
 
 reg.fit.test(X.sf,y.sf, alpha=0.2,pmax=40,tn=35,nfolds=5)
+
+
+# one sample subtraction a time and see the changes in cor, test.cor and coef
+
+X.rand=matrix(sample(X.sf), ncol=ncol(X.sf))
+colnames(X.rand)=colnames(X.sf)
+# initialize variable
+cor.m=c();test.cor.m=c();
+real.coef=list();rand.coef=list()
+for (i in -1:-41) {
+  real=reg.fit.test(X.sf[i,],y.sf[i], alpha=0.2,pmax=40,tn=35,nfolds=5)
+  rand=reg.fit.test(X.rand[i,],y.sf[i], alpha=0.2,pmax=40,tn=35,nfolds=5)
+  cor.m=rbind(cor.m,c(real$cor,rand$cor))
+  test.cor.m=rbind(test.cor.m,c(real$test.cor,rand$test.cor))
+  real.coef[-i]=real$coef
+  rand.coef[-i]=rand$coef
+}
+  
