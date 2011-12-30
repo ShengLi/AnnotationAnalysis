@@ -108,4 +108,3 @@ boot.huber = function(data=data, indices){
 data=cbind(X.sf, y.sf)
 
 
-
